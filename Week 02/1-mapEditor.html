@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="utf-8">
+  <title>Map Editor</title>
+  <style>
+    body {
+      /*centerlize the map*/
+      background: #383838;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .cell {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background-color: #b2b2b2;
+      border-bottom: solid 1px white;
+      border-right: solid 1px white;
+      vertical-align: middle;
+      line-height: 7px;
+    }
+
+    #container {
+      width: 701px;
+      display: flex;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      border-top: solid 1px white;
+      border-left: solid 1px white;
+    }
+
+    /* 美化一下button */
+    button {
+      margin: 10px;
+      background: transparent;
+      color: #f18607;
+      border: 1px solid #f18607;
+      padding: 0.5rem;
+      cursor: pointer;
+      transition: all 500ms ease;
+    }
+
+    button:hover {
+      background: #f18607;
+      color: #f6f7f9
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container">
+
+  </div>
+  <div id="control">
+    <button onclick="localStorage['map'] = JSON.stringify(map)">Save</button>
+    <button onclick="mapReset()">Reset</button>
+  </div>
+  <script>
+    // define a array to store the map data; use localStorage to store the data in the browser;
+    // if map does not exist, create a new one.
+    let map = localStorage["map"] ? JSON.parse(localStorage["map"]) : Array(10000).fill(0);
+    // get container element
+    let container = document.getElementById('container');
+
+    for (let y = 0; y < 100; y++) {
+      for (let x = 0; x < 100; x++) {
+        let cell = document.createElement("div");
+        cell.classList.add("cell");
+
+        if (map[y * 100 + x] == 1) {
+          cell.style.backgroundColor = "#f18607";
+        }
+
+        cell.addEventListener("mousemove", () => {
+          if (mousedown) {
+            //right mouse button pressed
+            if (clear) {
+              cell.style.backgroundColor = "";
+              map[y * 100 + x] = 0;
+            }
+            //left mouse button pressed
+            else if (fill) {
+              cell.style.backgroundColor = "#f18607";
+              map[y * 100 + x] = 1;
+            }
+          }
+        })
+        container.appendChild(cell);
+      }
+    }
+
+    let mousedown = false;
+    let fill = false;
+    let clear = false;
+    document.addEventListener("mousedown", e => {
+      mousedown = true;
+      //mousedown event.which: left button:1; middle button:2; right button:3;
+      fill = (e.which === 1);
+      clear = (e.which === 3);
+    });
+    document.addEventListener("mouseup", () => mousedown = false);
+    //prevent ContextMenu
+    document.addEventListener("contextmenu", e => e.preventDefault());
+
+    /**
+     * [mapReset description]
+     * Clear Map
+     */
+    function mapReset() {
+      var emptyMap = document.getElementsByClassName("cell");
+
+      for (var y = 0; y < 100; y++) {
+        for (var x = 0; x < 100; x++) {
+          emptyMap[y * 100 + x].style.backgroundColor = "";
+          map[y * 100 + x] = 0;
+        }
+      }
+      localStorage['map'] = JSON.stringify(map);
+    };
+  </script>
+</body>
+
+</html>
