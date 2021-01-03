@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="utf-8">
+  <title>Map Editor</title>
+  <style>
+    body {
+      /*centerlize the map*/
+      background: #383838;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .cell {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background-color: #b2b2b2;
+      border-bottom: solid 1px white;
+      border-right: solid 1px white;
+      vertical-align: middle;
+      line-height: 7px;
+    }
+
+    #container {
+      width: 701px;
+      display: flex;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      border-top: solid 1px white;
+      border-left: solid 1px white;
+    }
+
+    /* 美化一下button */
+    button {
+      margin: 10px;
+      background: transparent;
+      color: #f18607;
+      border: 1px solid #f18607;
+      padding: 0.5rem;
+      cursor: pointer;
+      transition: all 500ms ease;
+    }
+
+    button:hover {
+      background: #f18607;
+      color: #f6f7f9
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container">
+
+  </div>
+  <div id="control">
+    <button onclick="localStorage['map'] = JSON.stringify(map)">Save</button>
+    <button onclick="mapReset()">Reset</button>
+    <button onclick="findPath(map,[0,0],[50,50])">Find</button>
+  </div>
+  <script>
+    // define a array to store the map data; use localStorage to store the data in the browser;
+    // if map does not exist, create a new one.
+    let map = localStorage["map"] ? JSON.parse(localStorage["map"]) : Array(10000).fill(0);
+    // get container element
+    let container = document.getElementById('container');
+
+    for (let y = 0; y < 100; y++) {
+      for (let x = 0; x < 100; x++) {
+        let cell = document.createElement("div");
+        cell.classList.add("cell");
+
+        if (map[y * 100 + x] == 1) {
+          cell.style.backgroundColor = "#f18607";
+        }
+
+        cell.addEventListener("mousemove", () => {
+          if (mousedown) {
+            //right mouse button pressed
+            if (clear) {
+              cell.style.backgroundColor = "";
+              map[y * 100 + x] = 0;
+            }
+            //left mouse button pressed
+            else if (fill) {
+              cell.style.backgroundColor = "#f18607";
+              map[y * 100 + x] = 1;
+            }
+          }
+        })
+        container.appendChild(cell);
+      }
+    }
+
+    let mousedown = false;
+    let fill = false;
+    let clear = false;
+    document.addEventListener("mousedown", e => {
+      mousedown = true;
+      //mousedown event.which: left button:1; middle button:2; right button:3;
+      fill = (e.which === 1);
+      clear = (e.which === 3);
+    });
+    document.addEventListener("mouseup", () => mousedown = false);
+    //prevent ContextMenu
+    document.addEventListener("contextmenu", e => e.preventDefault());
+
+    /**
+     * [mapReset description]
+     * Clear Map
+     */
+    function mapReset() {
+      var emptyMap = document.getElementsByClassName("cell");
+
+      for (var y = 0; y < 100; y++) {
+        for (var x = 0; x < 100; x++) {
+          emptyMap[y * 100 + x].style.backgroundColor = "";
+          map[y * 100 + x] = 0;
+        }
+      }
+      localStorage['map'] = JSON.stringify(map);
+    };
+
+    /**
+     * findPath anync
+     * @param  {Array} map   selected map
+     * @param  {Array} start starting point
+     * @param  {Array} end   ending point
+     */
+    async function findPath(map, start, end) {
+      // Create a table to record the path
+      let table = Object.create(map);
+      let queue = new SortedBinaryHeap([start], (a, b) => distance(a) - distance(b));
+      /**
+       * insert unchecked point to the queue
+       * @param  {Integer} x
+       * @param  {Integer} y
+       * @param  {Array} pre previous point coordinator
+       * @return {Boolean}
+       */
+      async function insert(x, y, pre) {
+        if (x < 0 || x >= 100 || y < 0 || y >= 100) return;
+        if (table[y * 100 + x]) return;
+        await sleep(1);
+        container.children[y * 100 + x].style.backgroundColor = "#fff950";
+        // record the previous step.
+        table[y * 100 + x] = pre;
+        // insert the possible steps into the queue.
+        queue.insert([x, y]);
+      }
+      /**
+       * Get distance between points
+       * @param  {Array} point current point coordinator
+       */
+      function distance(point) {
+        return (point[0] - end[0]) ** 2 + (point[1] - end[1]) ** 2;
+      }
+
+      while (queue.length) {
+        let [x, y] = queue.take();
+        //console.log(x, y);
+
+        // when the destination has been reached, trace the path.
+        if (x === end[0] && y === end[1]) {
+          let path = [];
+          // go backwards
+          while (x != start[0] || y != start[1]) {
+            path.push(map[y * 100 + x]);
+            [x, y] = table[y * 100 + x];
+            await sleep(1);
+            container.children[y * 100 + x].style.backgroundColor = "#5254ff";
+          }
+
+          return path;
+        }
+
+        await insert(x - 1, y, [x, y]);
+        await insert(x, y - 1, [x, y]);
+        await insert(x + 1, y, [x, y]);
+        await insert(x, y + 1, [x, y]);
+
+        await insert(x - 1, y - 1, [x, y]);
+        await insert(x + 1, y - 1, [x, y]);
+        await insert(x - 1, y + 1, [x, y]);
+        await insert(x + 1, y + 1, [x, y]);
+      }
+      return null;
+    }
+
+    function sleep(t) {
+      return new Promise(function(resolve) {
+        setTimeout(resolve, t);
+      });
+    }
+
+
+    class SortedBinaryHeap {
+      constructor(data, compare) {
+        this.data = data;
+        this.compare = compare;
+      }
+      take() {
+        if (!this.data.length) return;
+
+        let minVal = this.data[0];
+        let i = 0;
+        /**
+         * The root of the tree will be in position 1 of the Array
+         * The left child of any given node at position i, will be located at 2i.
+         * The right child of a node at position i will be located at position at 2i+1.
+         * The parent of a node at position i is at position n/2.
+         */
+        while (i < this.data.length) {
+          if (i * 2 + 1 >= this.data.length)
+            break;
+          if (i * 2 + 2 >= this.data.length) {
+            this.data[i] = this.data[i * 2 + 1];
+            i = i * 2 + 1;
+            break;
+          }
+          if (this.compare(this.data[i * 2 + 1], this.data[i * 2 + 2]) < 0) {
+            this.data[i] = this.data[i * 2 + 1];
+            i = i * 2 + 1;
+          } else {
+            this.data[i] = this.data[i * 2 + 2];
+            i = i * 2 + 2;
+          }
+        }
+        if (i < this.data.length - 1) {
+          this.insertAt(i, this.data.pop());
+        } else {
+          this.data.pop();
+        }
+        return minVal;
+      }
+
+      insertAt(index, val) {
+        this.data[index] = val;
+        while (index > 0 && this.compare(val, this.data[Math.floor((index - 1) / 2)]) < 0) {
+          this.data[index] = this.data[Math.floor((index - 1) / 2)];
+          this.data[Math.floor((index - 1) / 2)] = val;
+          index = Math.floor((index - 1) / 2);
+        }
+      }
+
+      insert(val) {
+        this.insertAt(this.data.length, val);
+      }
+
+      get length() {
+        return this.data.length;
+      }
+    }
+  </script>
+</body>
+
+</html>
