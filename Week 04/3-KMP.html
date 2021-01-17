@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="utf-8">
+  <title>Week 4-3 KMP</title>
+</head>
+
+<body>
+  <script>
+    function kmp(source, pattern) {
+      // Next Array
+      let next = new Array(pattern.length).fill(0); {
+        let i = 1,
+          j = 0;
+
+        while (i < pattern.length - 1) {
+          if (pattern[i] === pattern[j]) {
+            ++j, ++i;
+            next[i] = j;
+          } else {
+            if (j > 0) {
+              j = next[j];
+            } else {
+              ++i;
+            }
+          }
+        }
+
+        next[0] = -1;
+      }
+      // Pattern Match
+      {
+        let i = 0,
+          j = 0;
+
+        while (i < source.length) {
+          if (pattern[j] === source[i]) {
+            ++j, ++i;
+          } else {
+            if (j > 0) {
+              j = next[j];
+            } else {
+              ++i;
+            }
+          }
+          if (j === pattern.length) {
+            return true;
+          }
+        }
+        return false;
+      }
+    }
+
+    console.log(kmp('ABABEDADFADFAABAA', 'ABEDADFADFA'));
+    console.log(kmp('helloworld', 'lle'));
+  </script>
+</body>
+
+</html>
